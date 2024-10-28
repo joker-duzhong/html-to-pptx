@@ -1,0 +1,37 @@
+{
+  "name": "html-to-pptx",
+  "version": "0.0.4",
+  "description": "Convert page elements to pptx. See README for more details.",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rollup -c",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joker-duzhong/html-to-pptx.git"
+  },
+  "keywords": [
+    "html",
+    "pptx",
+    "ppt",
+    "presentation",
+    "html-to-pptx"
+  ],
+  "author": "455422060@qq.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/joker-duzhong/html-to-pptx/issues"
+  },
+  "homepage": "https://github.com/joker-duzhong/html-to-pptx#readme",
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  },
+  "devDependencies": {
+    "rollup": "^2.79.2",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "sourceMap": false,
+    "target": "es6", // 或 "ESNext"
+    "module": "ES2015", // 或 "ESNext"
+    "strict": true,
+    "esModuleInterop": true, // 允许与 CommonJS 模块的互操作
+    "skipLibCheck": true, // 可选，跳过库文件检查
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node" // 对于模块解析，使用 node 解析策略
+  },
+  "include": ["src/**/*"]
+}
