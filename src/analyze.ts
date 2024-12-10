@@ -1,5 +1,4 @@
 import PptxGenJS from 'pptxgenjs';
-import { WRITE_OUTPUT_TYPE } from './index';
 
 
 /**
@@ -9,31 +8,92 @@ import { WRITE_OUTPUT_TYPE } from './index';
  */
 export function markdown2pptx(pageClass: string): PptxGenJS {
   const ppt = new PptxGenJS();
-  const pageDoms = document.getElementsByClassName(pageClass);
+  const pageDoms = Array.from(document.querySelectorAll(pageClass)).filter(element => {
+    // @ts-ignore
+    return element.offsetWidth > 0 && element.offsetHeight > 0 && getComputedStyle(element).visibility !== 'hidden';
+  });
+
   Array.from(pageDoms).forEach(dom => {
     const slide = ppt.addSlide();
-    const { styles, attributes } = traverseElements(dom as Element); // 调用遍历函数
+    const {styles, attributes} = traverseElements(dom as Element); // 调用遍历函数
     const backgroundImage = styles['background-image'] && styles['background-image']?.match(/url\(["']?([^"']*)["']?\)/)?.length ? styles['background-image']?.match(/url\(["']?([^"']*)["']?\)/)[1] : null;
-    slide.background = { color: rgbToHex(styles['background-color']), path: backgroundImage };
+    slide.background = {color: rgbToHex(styles['background-color']), path: backgroundImage};
     // 遍历子元素
     dom.childNodes.forEach((child: any) => {
       if (child.nodeType === Node.ELEMENT_NODE) { // 确保是元素节点
         const text = child.innerHTML;
-        const { styles, attributes } = traverseElements(child as Element); // 调用遍历函数
-        const { width, height, top, left, color } = styles;
+        const {styles, attributes} = traverseElements(child as Element); // 调用遍历函数
+        const {width, height, top, left, color} = styles;
         const alignItems = styles['align-items'];
         const justifyContent = styles['justify-content'];
         const fontSize = parseInt(styles['font-size'], 10) * .3;
         const fontWeight = styles['font-weight'];
         const borderColor = styles['border-color'];
         if (attributes['type'] === 'text') {
-          slide.addText(text, {
-            w: PxToPPT(width), h: PxToPPT(height), x: PxToPPT(left), y: PxToPPT(top),
-            align: justifyContentToPPTalign(justifyContent), valign: alignItemsToPPTvalign(alignItems),
-            fontSize, color: rgbToHex(color), bold: fontWeight === 'bold' || fontWeight > 400,
-          });
+          if (text.startsWith('<ul') || text.startsWith('<li')) {
+            let listItems;
+            listItems = child.querySelectorAll('li');
+
+
+            let computeHeight = 0;
+            listItems.forEach((item: Element) => {
+              const {styles: liStyles} = traverseElements(item); // 调用遍历函数
+              const {
+                width: liWidth,
+                height: liHeight,
+                top: liTop,
+                left: liLeft,
+                color: liColor
+              } = liStyles;
+              const paddingLeft = liStyles['padding-left']
+              const paddingRight = liStyles['padding-right']
+              const paddingTop = liStyles['padding-top']
+              const paddingBottom = liStyles['padding-bottom']
+              const liAlignItems = liStyles['align-items'];
+              const liJustifyContent = liStyles['justify-content'];
+              const liFontSize = parseInt(liStyles['font-size'], 10) * .3;
+              const liFontWeight = liStyles['font-weight'];
+              const liBorderColor = liStyles['border-color'];
+              const {x: liX, y: liY, height: h, width: w} = item.getBoundingClientRect()
+              // @ts-ignore
+              slide.addText(item.textContent.trim(), {
+                w: PxToPPT(liWidth),
+                h: PxToPPT(liHeight),
+                x: PxToPPT(left),
+                y: PxToPPT(top) + computeHeight,
+                align: justifyContentToPPTalign(liJustifyContent),
+                valign: alignItemsToPPTvalign(liAlignItems),
+                fontSize: liFontSize,
+                color: rgbToHex(liColor),
+                bold: liFontWeight === 'bold' || liFontWeight > 400,
+                bullet: text.startsWith('<li'),
+                margin: [PxToPPT(paddingTop), PxToPPT(paddingRight), PxToPPT(paddingBottom), PxToPPT(paddingLeft)],
+              });
+              computeHeight += PxToPPT(liHeight);
+            })
+
+          } else {
+            slide.addText(text, {
+              w: PxToPPT(width),
+              h: PxToPPT(height),
+              x: PxToPPT(left),
+              y: PxToPPT(top),
+              align: justifyContentToPPTalign(justifyContent),
+              valign: alignItemsToPPTvalign(alignItems),
+              fontSize,
+              color: rgbToHex(color),
+              bold: fontWeight === 'bold' || fontWeight > 400,
+            });
+          }
+
         } else if (attributes['type'] === 'image') {
-          slide.addImage({ path: attributes['src'], x: PxToPPT(left), y: PxToPPT(top), w: PxToPPT(width), h: PxToPPT(height), });
+          slide.addImage({
+            path: attributes['src'],
+            x: PxToPPT(left),
+            y: PxToPPT(top),
+            w: PxToPPT(width),
+            h: PxToPPT(height),
+          });
         } else if (attributes['type'] === 'table') {
           try {
             const tableData: any = []; // 假设您需要从表格中提取数据
@@ -47,10 +107,16 @@ export function markdown2pptx(pageClass: string): PptxGenJS {
               tableData.push(rowData);
             }
             slide.addTable(tableData, {
-              w: PxToPPT(width), h: PxToPPT(height), x: PxToPPT(left), y: PxToPPT(top),
-              align: justifyContentToPPTalign(justifyContent), valign: alignItemsToPPTvalign(alignItems),
-              fontSize, color: rgbToHex(color), bold: fontWeight === 'bold' || fontWeight > 400,
-              border: { color: rgbToHex(borderColor) },
+              w: PxToPPT(width),
+              h: PxToPPT(height),
+              x: PxToPPT(left),
+              y: PxToPPT(top),
+              align: justifyContentToPPTalign(justifyContent),
+              valign: alignItemsToPPTvalign(alignItems),
+              fontSize,
+              color: rgbToHex(color),
+              bold: fontWeight === 'bold' || fontWeight > 400,
+              border: {color: rgbToHex(borderColor)},
             });
           } catch (error) {
             console.error('Error parsing table data:', error);
@@ -67,6 +133,7 @@ export function markdown2pptx(pageClass: string): PptxGenJS {
 function PxToPPT(pxVal: string): number {
   return parseInt(pxVal, 10) / 192;
 }
+
 /** 垂直对齐方式转换为 pptx 的 valign */
 function alignItemsToPPTvalign(val: string): any {
   switch (val) {
@@ -84,6 +151,7 @@ function alignItemsToPPTvalign(val: string): any {
       return 'middle'; // 默认返回中间对齐
   }
 }
+
 /** 水平对齐方式转换为 pptx 的 align */
 function justifyContentToPPTalign(val: string): any {
   switch (val) {
@@ -122,5 +190,5 @@ function traverseElements(element: Element): { styles: any, attributes: any } {
   const computedStyle = window.getComputedStyle(element);
   const styles: any = {};
   Array.from(computedStyle).forEach(style => styles[style] = computedStyle.getPropertyValue(style));
-  return { styles, attributes }
+  return {styles, attributes}
 }
