@@ -1,6 +1,6 @@
 {
   "name": "html-to-pptx",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "description": "Convert page elements to pptx. See README for more details.",
   "main": "dist/index.js",
   "scripts": {
