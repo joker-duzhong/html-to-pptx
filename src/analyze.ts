@@ -36,6 +36,9 @@ export function markdown2pptx(pageClass: string): PptxGenJS {
 
 
             let computeHeight = 0;
+            //当前是否是第一个加粗的 默认为true
+            let isFirstBold = true;
+            let prePaddingBottom = 0
             listItems.forEach((item: Element) => {
               const {styles: liStyles} = traverseElements(item); // 调用遍历函数
               const {
@@ -52,9 +55,23 @@ export function markdown2pptx(pageClass: string): PptxGenJS {
               const liAlignItems = liStyles['align-items'];
               const liJustifyContent = liStyles['justify-content'];
               const liFontSize = parseInt(liStyles['font-size'], 10) * .3;
+              const liFontFace = liStyles['font-family'];
               const liFontWeight = liStyles['font-weight'];
               const liBorderColor = liStyles['border-color'];
               const {x: liX, y: liY, height: h, width: w} = item.getBoundingClientRect()
+              let bold = false;
+              if (liFontWeight === 'bold' || liFontWeight > 400) {
+                bold = true
+                if (!isFirstBold){
+                  //不是第一个加粗的 控制一下间距
+                  computeHeight += prePaddingBottom;
+                }
+
+                if (isFirstBold) {
+                  //如果不是
+                  isFirstBold = false;
+                }
+              }
               // @ts-ignore
               slide.addText(item.textContent.trim(), {
                 w: PxToPPT(liWidth),
@@ -65,11 +82,13 @@ export function markdown2pptx(pageClass: string): PptxGenJS {
                 valign: alignItemsToPPTvalign(liAlignItems),
                 fontSize: liFontSize,
                 color: rgbToHex(liColor),
-                bold: liFontWeight === 'bold' || liFontWeight > 400,
+                bold: bold,
                 bullet: text.startsWith('<li'),
+                fontFace: liFontFace.split(',')[0]?.trim(),
                 margin: [PxToPPT(paddingTop), PxToPPT(paddingRight), PxToPPT(paddingBottom), PxToPPT(paddingLeft)],
               });
               computeHeight += PxToPPT(liHeight);
+              prePaddingBottom = PxToPPT(paddingBottom);
             })
 
           } else {
