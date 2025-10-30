@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>静态 PPT 预览</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">静态 PPT 预览</div>
+    <div class="controls">
+      <label class="autoplay">
+        <input id="autoplay-checkbox" type="checkbox" /> 自动播放
+      </label>
+      <button id="export-btn" class="nav" title="导出 PPT">导出 PPT</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <button class="nav nav-left" id="prev-btn" aria-label="上一张">◀</button>
+
+    <div class="viewport">
+      <div class="slides" id="slide-container" aria-live="polite"></div>
+    </div>
+
+    <button class="nav nav-right" id="next-btn" aria-label="下一张">▶</button>
+  </main>
+
+  <footer class="footer">
+    <div class="progress" id="progress"></div>
+    <div class="hint">← → 切换幻灯片 • 空格播放/暂停</div>
+  </footer>
+
+  <script>
+    // 简单的幻灯片数据（可替换为实际内容）
+    const slidesData = [
+      { title: '封面', subtitle: '项目演示 • 静态 PPT', bg: 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)' },
+      { title: '目录', items: ['背景', '实现', '演示', '问答'], bg: 'linear-gradient(135deg,#f6d365 0%,#fda085 100%)' },
+      { title: '实现概览', content: '将 HTML 渲染为 PPT 风格页面，支持导航与自动播放。', bg: 'linear-gradient(135deg,#89f7fe 0%,#66a6ff 100%)' },
+      { title: '演示', content: '这是示例幻灯片，样式优雅，易读。', bg: 'linear-gradient(135deg,#fbc2eb 0%,#a6c1ee 100%)' },
+      { title: '谢谢', subtitle: '问题与讨论', bg: 'linear-gradient(135deg,#c3ffd7 0%,#7a9b76 100%)' }
+    ];
+
+    const container = document.getElementById('slide-container');
+    const progressEl = document.getElementById('progress');
+    let currentIndex = 0;
+    let autoplay = false;
+    let autoplayTimer = null;
+
+    // 创建幻灯片 DOM
+    function renderSlides() {
+      container.innerHTML = '';
+      slidesData.forEach((s, i) => {
+        const slide = document.createElement('section');
+        slide.className = 'slide';
+        slide.style.backgroundImage = s.bg || '';
+        slide.setAttribute('data-index', i);
+
+        const inner = document.createElement('div');
+        inner.className = 'slide-inner';
+
+        const h = document.createElement('h2');
+        h.className = 'slide-title';
+        h.textContent = s.title || '';
+        h.setAttribute('type', 'text');
+        inner.appendChild(h);
+
+        if (s.subtitle) {
+          const sub = document.createElement('p');
+          sub.className = 'slide-sub';
+          sub.textContent = s.subtitle;
+          sub.setAttribute('type', 'text');
+          inner.appendChild(sub);
+        }
+
+        if (s.items && Array.isArray(s.items)) {
+          const ul = document.createElement('ul');
+          ul.className = 'bullet';
+          s.items.forEach(it => {
+            const li = document.createElement('li');
+            li.textContent = it;
+            li.setAttribute('type', 'text');
+            ul.appendChild(li);
+          });
+          ul.setAttribute('type', 'text');
+          inner.appendChild(ul);
+        }
+
+        if (s.content) {
+          const p = document.createElement('p');
+          p.className = 'slide-content';
+          p.textContent = s.content;
+          p.setAttribute('type', 'text');
+          inner.appendChild(p);
+        }
+
+        slide.appendChild(inner);
+        container.appendChild(slide);
+      });
+
+      // 进度点
+      progressEl.innerHTML = '';
+      slidesData.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.className = 'dot';
+        dot.setAttribute('data-index', i);
+        dot.addEventListener('click', () => goTo(i));
+        progressEl.appendChild(dot);
+      });
+    }
+
+    function updateView() {
+      const width = container.clientWidth || 800;
+      container.style.transform = `translateX(-${currentIndex * 100}%)`;
+      Array.from(progressEl.children).forEach((d, i) => d.classList.toggle('active', i === currentIndex));
+    }
+
+    function prev() { currentIndex = Math.max(0, currentIndex - 1); updateView(); }
+    function next() { currentIndex = Math.min(slidesData.length - 1, currentIndex + 1); updateView(); }
+    function goTo(i) { currentIndex = i; updateView(); }
+
+    // 自动播放控制
+    function startAutoplay() {
+      stopAutoplay();
+      autoplayTimer = setInterval(() => {
+        currentIndex = (currentIndex + 1) % slidesData.length;
+        updateView();
+      }, 3500);
+    }
+
+    function stopAutoplay() {
+      if (autoplayTimer) { clearInterval(autoplayTimer); autoplayTimer = null; }
+    }
+
+    // 事件绑定
+    document.getElementById('prev-btn').addEventListener('click', prev);
+    document.getElementById('next-btn').addEventListener('click', next);
+    document.getElementById('autoplay-checkbox').addEventListener('change', (e) => {
+      autoplay = e.target.checked;
+      if (autoplay) startAutoplay(); else stopAutoplay();
+    });
+
+    // 键盘导航
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'ArrowLeft') prev();
+      if (e.code === 'ArrowRight') next();
+      if (e.code === 'Space') {
+        autoplay = !autoplay;
+        document.getElementById('autoplay-checkbox').checked = autoplay;
+        if (autoplay) startAutoplay(); else stopAutoplay();
+        e.preventDefault();
+      }
+    });
+
+    // 初始化
+    renderSlides();
+    // 强制一帧以便 CSS transition 感觉流畅
+    requestAnimationFrame(() => updateView());
+  </script>
+  <!-- 引入构建产物（UMD）以便在浏览器中直接调用导出函数 -->
+  <script src="../dist/index.umd.js"></script>
+  <script>
+    // UMD 包挂载在全局 HtmlToPptx 下
+    const exportBtn = document.getElementById('export-btn');
+    exportBtn.addEventListener('click', async () => {
+      try {
+        // 传入选择器 '.slide'（analyze 中会用作 querySelectorAll）
+        // 第二个参数为文件名
+        if (window.HtmlToPptx && window.HtmlToPptx.downloadHtmlToPpt) {
+          await window.HtmlToPptx.downloadHtmlToPpt('.slide', 'demo-presentation');
+        } else {
+          alert('插件未正确加载，请先构建 dist 或检查控制台错误');
+          console.error('HtmlToPptx 未找到', window.HtmlToPptx);
+        }
+      } catch (err) {
+        console.error('导出失败', err);
+        alert('导出失败，请查看控制台错误信息');
+      }
+    });
+  </script>
+</body>
+
+</html>

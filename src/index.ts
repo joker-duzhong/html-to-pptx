@@ -1,4 +1,4 @@
-import { markdown2pptx } from './analyze'
+import { html2pptx } from './analyze'
 
 /** 导出类型 */
 export type WRITE_OUTPUT_TYPE = 'arraybuffer' | 'base64' | 'binarystring' | 'blob' | 'nodebuffer' | 'uint8array' | 'STREAM';
@@ -12,7 +12,7 @@ export type WRITE_OUTPUT_TYPE = 'arraybuffer' | 'base64' | 'binarystring' | 'blo
  * @returns ppt文件
  */
 export function exportHtmlToPpt(pageClassName: string = 'page', outputType: WRITE_OUTPUT_TYPE): Promise<string | ArrayBuffer | Blob | Uint8Array> {
-  return markdown2pptx(pageClassName)?.write({ outputType });
+  return html2pptx(pageClassName)?.write({ outputType });
 }
 
 /**
@@ -24,5 +24,5 @@ export function exportHtmlToPpt(pageClassName: string = 'page', outputType: WRIT
  * @returns 
  */
 export function downloadHtmlToPpt(pageClassName: string = 'page', fileName: string = 'hope'): Promise<string | ArrayBuffer | Blob | Uint8Array> {
-  return markdown2pptx(pageClassName).writeFile({ fileName: fileName + '.pptx' });
+  return html2pptx(pageClassName).writeFile({ fileName: fileName + '.pptx' });
 }

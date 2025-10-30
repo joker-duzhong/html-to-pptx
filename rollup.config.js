@@ -1,15 +1,28 @@
 import typescript from "rollup-plugin-typescript2";
 import { terser } from "rollup-plugin-terser";
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
 
 export default {
-  input: "src/index.ts", // 入口文件
-  output: {
-    file: "dist/index.js", // 输出文件
-    format: "cjs", // 输出格式，可以根据需要选择 'cjs', 'esm', 'umd' 等
-    sourcemap: false, // 是否生成 source map
-  },
+  input: "src/index.ts",
+  output: [
+    {
+      file: "dist/index.umd.js",
+      format: "umd",
+      name: "HtmlToPptx",
+      sourcemap: false,
+      exports: 'named'
+    },
+    {
+      file: "dist/index.esm.js",
+      format: "es",
+      sourcemap: false
+    }
+  ],
   plugins: [
-    typescript(), // 编译 TypeScript
-    terser(), // 压缩代码
+    resolve(),
+    commonjs(),
+    typescript(),
+    terser()
   ],
 };

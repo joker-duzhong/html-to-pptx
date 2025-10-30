@@ -6,7 +6,7 @@ import PptxGenJS from 'pptxgenjs';
  * @param pageClass 页面样式类名
  * @param ppt pptx 实例对象
  */
-export function markdown2pptx(pageClass: string): PptxGenJS {
+export function html2pptx(pageClass: string): PptxGenJS {
   const ppt = new PptxGenJS();
   const pageDoms = Array.from(document.querySelectorAll(pageClass)).filter(element => {
     // @ts-ignore

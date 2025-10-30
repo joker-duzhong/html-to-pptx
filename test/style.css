@@ -1,0 +1,56 @@
+:root{
+  --bg: #0f1724;
+  --card-bg: rgba(255,255,255,0.06);
+  --muted: rgba(255,255,255,0.75);
+  --accent: #7c5cff;
+  --glass: rgba(255,255,255,0.06);
+  --radius: 14px;
+  --max-width: 1000px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif;color:var(--muted);background:linear-gradient(180deg,#071029 0%, #0f1724 100%);}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;background:transparent;max-width:var(--max-width);margin:18px auto 0;color:#fff}
+.brand{font-weight:700;color:#fff;font-size:18px;letter-spacing:0.2px}
+.controls{font-size:14px}
+.autoplay input{margin-right:8px}
+
+.stage{display:flex;align-items:center;justify-content:center;gap:18px;max-width:var(--max-width);margin:28px auto;padding:24px}
+.viewport{width:100%;max-width:920px;height:560px;background:var(--card-bg);border-radius:var(--radius);box-shadow:0 10px 30px rgba(2,6,23,0.6);overflow:hidden;position:relative}
+
+.slides{height:100%;display:flex;flex-direction:row;transition:transform 450ms cubic-bezier(.2,.9,.2,1);}
+.slide{flex:0 0 100%;display:flex;align-items:center;justify-content:center;padding:60px}
+.slide-inner{width:90%;max-width:880px;background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));border-radius:12px;padding:40px;backdrop-filter: blur(6px);box-shadow: 0 8px 26px rgba(2,6,23,0.5);color: #fff}
+.slide-title{margin:0;font-size:36px;font-weight:700;letter-spacing:-0.4px}
+.slide-sub{margin:8px 0 0;color:rgba(255,255,255,0.85)}
+.slide-content{margin-top:18px;font-size:18px;line-height:1.6;color:rgba(255,255,255,0.9)}
+.bullet{margin-top:14px;padding-left:20px}
+.bullet li{margin:8px 0}
+
+.nav{background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:#fff;padding:12px 14px;border-radius:10px;cursor:pointer;backdrop-filter: blur(6px);box-shadow:0 6px 20px rgba(2,6,23,0.5);}
+.nav-left{margin-left:6px}
+.nav-right{margin-right:6px}
+.nav:hover{transform:translateY(-2px)}
+
+.footer{max-width:var(--max-width);margin:12px auto 32px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;color:rgba(255,255,255,0.65)}
+.progress{display:flex;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.18);border:none;cursor:pointer;padding:0}
+.dot.active{width:24px;background:linear-gradient(90deg,var(--accent),#5be6d4);box-shadow:0 6px 14px rgba(124,92,255,0.18)}
+
+.hint{font-size:13px;opacity:0.85}
+
+/* 响应式 */
+@media (max-width:980px){
+  .viewport{height:480px}
+  .slide-title{font-size:30px}
+}
+@media (max-width:640px){
+  .stage{padding:12px}
+  .viewport{height:360px;border-radius:10px}
+  .slide-inner{padding:20px}
+  .slide-title{font-size:22px}
+}
+
+/* 可选的淡入效果 */
+.slide-inner{transition:transform 360ms ease, opacity 360ms ease}
