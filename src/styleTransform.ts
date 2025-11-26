@@ -1,260 +1,163 @@
 /**
- * HTML/CSS 到 PPTX 样式转换工具
- * 
- * 不支持的 CSS 属性（PPTX 限制）：
- * - transform: PPTX 不支持 CSS 变换（rotate、scale、translate 等）
- * - opacity: PPTX 不支持整体透明度（但支持颜色中的 alpha 通道）
- * - box-shadow: PPTX 不支持阴影效果
- * - border-radius: PPTX 不支持圆角
- * - background-clip: PPTX 不支持背景裁剪
- * - filter: PPTX 不支持滤镜效果
- * - animation: PPTX 不支持 CSS 动画
- * - flex/grid: 需要在转换时计算出具体的位置和尺寸
- * 
- * 部分支持的属性：
- * - font-family: 仅支持已安装的字体
- * - line-height: 转换为近似值
- * - text-decoration: 仅支持 underline
+ * styleTransform.ts
+ * 负责将 DOM 样式转换为 PPTXGenJS 样式对象
  */
 
-import PptxGenJS from 'pptxgenjs';
-
-/** 基础样式属性集合 */
-export interface TransformedStyle {
-  // 尺寸与位置
-  x?: number;
-  y?: number;
-  w?: number;
-  h?: number;
-  
-  // 边距
-  margin?: [number, number, number, number]; // [top, right, bottom, left]
-  padding?: [number, number, number, number];
-  
-  // 文本样式
-  fontSize?: number;
-  fontFace?: string;
-  color?: string;
-  bold?: boolean;
-  italic?: boolean;
-  underline?: any;
-  
-  // 对齐
-  align?: 'left' | 'center' | 'right' | 'justify';
-  valign?: 'top' | 'middle' | 'bottom';
-  
-  // 边框
-  border?: {
-    type?: 'solid' | 'dash' | 'none';
-    color?: string;
-    pt?: number;
-  };
-  
-  // 背景
-  fill?: {
-    color?: string;
-    transparency?: number;
-  };
-
-  // 列表
-  bullet?: boolean | { type?: 'number' | 'bullet' };
-
-  // 特殊
-  rowspan?: number;
-  colspan?: number;
-  autoPageBreak?: boolean;
-  breakLine?: boolean;
+export interface ElementStyle {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  fontSize: number;
+  fontFace: string;
+  color: string;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strike: boolean;
+  align: "left" | "center" | "right" | "justify";
+  valign: "top" | "middle" | "bottom";
+  lineSpacing: number; // 行高 (磅)
+  charSpacing: number; // 字间距 (磅)
+  fill?: { color: string; transparency?: number };
+  border?: any;
+  opacity?: number;
+  padding?: any;
 }
 
-/** 将像素值转换为 PPT 单位 */
-export function PxToPPT(pxVal: string | number): number {
-  const px = typeof pxVal === 'string' ? parseInt(pxVal, 10) : pxVal;
-  return px / 192;
-}
+/**
+ * 颜色解析：确保返回 6 位 HEX，默认黑色
+ */
+export function colorToHex(color: string): string {
+  if (!color || color === "transparent" || color === "inherit") return "";
+  if (color.startsWith("#")) return color.replace("#", "").toUpperCase();
 
-/** 计算元素的绝对位置（考虑父元素位置） */
-export function getAbsolutePosition(element: Element): { x: number; y: number } {
-  const rect = element.getBoundingClientRect();
-  return {
-    x: rect.left + window.scrollX,
-    y: rect.top + window.scrollY
-  };
-}
-
-/** 将 rgb/rgba 颜色转换为十六进制 */
-export function rgbToHex(color: string): string {
-  // 处理 rgba
-  if (color.startsWith('rgba')) {
-    const matches = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
-    if (matches) {
-      const [_, r, g, b, a] = matches;
-      const hex = [r, g, b].map(x => {
-        const hex = parseInt(x).toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      }).join('');
-      return `#${hex}`;
-      // 注意：alpha 值在 PPTX 中需要单独处理为 transparency
+  if (color.startsWith("rgb")) {
+    const rgba = color.match(/(\d+(\.\d+)?)/g);
+    if (rgba && rgba.length >= 3) {
+      // Alpha 为 0 视为透明
+      if (rgba.length > 3 && parseFloat(rgba[3]) === 0) return "";
+      const r = parseInt(rgba[0]).toString(16).padStart(2, "0");
+      const g = parseInt(rgba[1]).toString(16).padStart(2, "0");
+      const b = parseInt(rgba[2]).toString(16).padStart(2, "0");
+      return (r + g + b).toUpperCase();
     }
   }
-  
-  // 处理 rgb
-  const matches = color.match(/\d+/g);
-  if (!matches) return '#000000';
-  
-  const hex = matches.map(x => {
-    const hex = parseInt(x).toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  }).join('');
-  
-  return `#${hex}`;
+  return "000000";
 }
 
-/** 转换文本对齐方式 */
-export function transformTextAlign(style: CSSStyleDeclaration): 'left' | 'center' | 'right' | 'justify' {
-  // 优先使用 text-align
-  const textAlign = style.textAlign;
-  if (textAlign) {
-    switch (textAlign) {
-      case 'left': return 'left';
-      case 'center': return 'center';
-      case 'right': return 'right';
-      case 'justify': return 'justify';
+/**
+ * 获取透明度 (0-100%)
+ */
+function getTransparency(style: CSSStyleDeclaration): number {
+  const opacity = parseFloat(style.opacity);
+  if (!isNaN(opacity) && opacity < 1) {
+    return (1 - opacity) * 100;
+  }
+  // 处理 rgba 背景色的透明度
+  if (style.backgroundColor.startsWith("rgba")) {
+    const rgba = style.backgroundColor.match(/(\d+(\.\d+)?)/g);
+    if (rgba && rgba.length > 3) {
+      return (1 - parseFloat(rgba[3])) * 100;
     }
   }
-  
-  // 回退到 flex 布局的对齐方式
-  const justifyContent = style.justifyContent;
-  switch (justifyContent) {
-    case 'flex-start': return 'left';
-    case 'center': return 'center';
-    case 'flex-end': return 'right';
-    case 'space-between':
-    case 'space-around':
-    case 'space-evenly':
-      return 'justify';
-    default:
-      return 'left';
-  }
+  return 0;
 }
 
-/** 转换垂直对齐方式 */
-export function transformVerticalAlign(style: CSSStyleDeclaration): 'top' | 'middle' | 'bottom' {
-  // 优先使用 vertical-align
-  const verticalAlign = style.verticalAlign;
-  if (verticalAlign) {
-    switch (verticalAlign) {
-      case 'top': return 'top';
-      case 'middle': return 'middle';
-      case 'bottom': return 'bottom';
-    }
-  }
-  
-  // 回退到 flex 布局的对齐方式
-  const alignItems = style.alignItems;
-  switch (alignItems) {
-    case 'flex-start': return 'top';
-    case 'center': return 'middle';
-    case 'flex-end': return 'bottom';
-    case 'stretch': return 'middle';
-    default: return 'middle';
-  }
-}
-
-/** 转换字体样式 */
-export function transformFontStyles(style: CSSStyleDeclaration): Pick<TransformedStyle, 'fontFace' | 'fontSize' | 'bold' | 'italic' | 'underline'> {
-  const textDecoration = style.textDecoration.includes('underline');
-  return {
-    fontFace: style.fontFamily?.split(',')[0]?.trim().replace(/['"]/g, ''),
-    fontSize: parseInt(style.fontSize, 10) * 0.3,
-    bold: style.fontWeight === 'bold' || parseInt(style.fontWeight, 10) > 400,
-    italic: style.fontStyle === 'italic',
-    underline: textDecoration ? { style: 'single' } : undefined
-  };
-}
-
-/** 转换边框样式 */
-export function transformBorderStyles(style: CSSStyleDeclaration): TransformedStyle['border'] {
-  const borderColor = style.borderColor;
-  const borderWidth = parseInt(style.borderWidth, 10);
-  const borderStyle = style.borderStyle;
-
-  if (!borderColor || !borderWidth || borderStyle === 'none') return undefined;
-
-  return {
-    type: borderStyle === 'dashed' ? 'dash' : 'solid',
-    color: rgbToHex(borderColor),
-    pt: PxToPPT(borderWidth)
-  };
-}
-
-/** 转换背景样式 */
-export function transformBackgroundStyles(style: CSSStyleDeclaration): TransformedStyle['fill'] {
-  const bgcolor = style.backgroundColor;
-  if (!bgcolor || bgcolor === 'transparent') return undefined;
-
-  let transparency = 0;
-  if (bgcolor.startsWith('rgba')) {
-    const matches = bgcolor.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
-    if (matches) {
-      transparency = Math.round((1 - parseFloat(matches[4])) * 100);
-    }
-  }
-
-  return {
-    color: rgbToHex(bgcolor),
-    transparency
-  };
-}
-
-/** 转换元素的完整样式 */
-export function transformElementStyle(element: Element): TransformedStyle {
+/**
+ * 核心：获取计算样式
+ */
+export function getComputedElementStyle(
+  element: Element,
+  pageRect: DOMRect,
+  globalScale: number,
+  pageTransformScale: number
+): ElementStyle {
   const style = window.getComputedStyle(element);
-  const box = element.getBoundingClientRect();
-  const pos = getAbsolutePosition(element);
+  const rect = element.getBoundingClientRect();
 
-  const transformed: TransformedStyle = {
-    // 位置和尺寸
-    x: PxToPPT(pos.x),
-    y: PxToPPT(pos.y),
-    w: PxToPPT(box.width),
-    h: PxToPPT(box.height),
+  // 1. 坐标和宽高转换 (基于渲染尺寸还原)
+  const x = ((rect.left - pageRect.left) / pageTransformScale) * globalScale;
+  const y = ((rect.top - pageRect.top) / pageTransformScale) * globalScale;
+  const w = (rect.width / pageTransformScale) * globalScale;
+  const h = (rect.height / pageTransformScale) * globalScale;
 
-    // 边距
-    margin: [
-      PxToPPT(style.marginTop),
-      PxToPPT(style.marginRight),
-      PxToPPT(style.marginBottom),
-      PxToPPT(style.marginLeft)
-    ],
-    padding: [
-      PxToPPT(style.paddingTop),
-      PxToPPT(style.paddingRight),
-      PxToPPT(style.paddingBottom),
-      PxToPPT(style.paddingLeft)
-    ],
+  // 2. 字体大小 (基于原始设计尺寸)
+  const pxFontSize = parseFloat(style.fontSize) || 14;
+  const fontSize = pxFontSize * globalScale * 72; // px -> pt
 
-    // 文本对齐
-    align: transformTextAlign(style),
-    valign: transformVerticalAlign(style),
+  // 3. 行高 (Line Height)
+  // PPTXGenJS 的 lineSpacing 如果是数字，单位是 Points。
+  // 浏览器 normal 通常约为 1.2 倍
+  let lineSpacing: number;
+  if (style.lineHeight === "normal") {
+    lineSpacing = fontSize * 1.2;
+  } else if (!isNaN(parseFloat(style.lineHeight))) {
+    // 如果是纯数字 (倍数)，如 1.5
+    if (/^\d+(\.\d+)?$/.test(style.lineHeight)) {
+      lineSpacing = fontSize * parseFloat(style.lineHeight);
+    } else {
+      // 如果是 px 值
+      const pxLineHeight = parseFloat(style.lineHeight);
+      lineSpacing = pxLineHeight * globalScale * 72;
+    }
+  } else {
+    lineSpacing = fontSize * 1.2;
+  }
 
-    // 文本样式
-    ...transformFontStyles(style),
-    color: rgbToHex(style.color),
+  // 4. 边框
+  let border = undefined;
+  const borderWidth = parseFloat(style.borderWidth);
+  if (borderWidth > 0 && style.borderStyle !== "none" && style.borderColor) {
+    border = {
+      pt: borderWidth * globalScale * 72,
+      color: colorToHex(style.borderColor),
+      type: style.borderStyle === "dashed" ? "dash" : "solid",
+    } as any;
+  }
 
-    // 边框
-    border: transformBorderStyles(style),
+  // 5. 对齐
+  let align: any = style.textAlign;
+  if (align === "start") align = "left";
+  if (align === "end") align = "right";
 
-    // 背景
-    fill: transformBackgroundStyles(style),
+  let valign: any = "top";
+  if (style.display === "flex") {
+    if (style.alignItems === "center") valign = "middle";
+    if (style.alignItems === "flex-end") valign = "bottom";
+  } else {
+    if (style.verticalAlign === "middle") valign = "middle";
+    if (style.verticalAlign === "bottom") valign = "bottom";
+  }
 
-    // 列表样式
-    bullet: element.tagName.toLowerCase() === 'li'
+  // 6. 背景与透明度
+  const bgColor = colorToHex(style.backgroundColor);
+  const transparency = getTransparency(style);
+
+  return {
+    x,
+    y,
+    w,
+    h,
+    fontSize,
+    fontFace:
+      style.fontFamily?.split(",")[0].replace(/['"]/g, "").trim() || "黑体",
+    color: colorToHex(style.color),
+    bold: parseInt(style.fontWeight) >= 600 || style.fontWeight === "bold",
+    italic: style.fontStyle === "italic",
+    underline: style.textDecoration.includes("underline"),
+    strike: style.textDecoration.includes("line-through"),
+    align,
+    valign,
+    lineSpacing,
+    charSpacing: parseFloat(style.letterSpacing) || 0,
+    fill: bgColor
+      ? {
+        color: bgColor,
+        transparency: transparency > 0 ? transparency : undefined,
+      }
+      : undefined,
+    border,
+    opacity: parseFloat(style.opacity),
   };
-
-  return transformed;
-}
-
-/** 获取元素的所有可用样式属性 */
-export function getElementStyles(element: Element): TransformedStyle {
-  return transformElementStyle(element);
 }
