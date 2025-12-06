@@ -2,7 +2,14 @@
   "name": "html-to-pptx",
   "version": "1.1.0",
   "description": "Convert page elements to pptx. See README for more details.",
+  // 1. CommonJS 入口 (require)
   "main": "dist/index.js",
+  // 2. ES Module 入口 (import) - 现代打包工具优先使用这个
+  "module": "dist/index.esm.js",
+  // 3. TypeScript 类型定义 - 这一步最关键，解决了 import 包含 /src 的问题
+  "types": "dist/index.d.ts",
+  // 4. 浏览器 CDN 默认入口
+  "unpkg": "dist/html-to-pptx.min.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rollup -c",
@@ -27,6 +34,9 @@
   },
   "homepage": "https://github.com/joker-duzhong/html-to-pptx#readme",
   "dependencies": {
+    "pptxgenjs": "^4.0.1"
+  },
+  "peerDependencies": {
     "pptxgenjs": "^4.0.1"
   },
   "devDependencies": {

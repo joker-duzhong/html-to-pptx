@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
-    "outDir": "./dist",
-    "sourceMap": false,
-    "target": "es6", // 或 "ESNext"
-    "module": "ES2015", // 或 "ESNext"
+    "target": "es5",
+    "module": "esnext",
+    "declaration": true,       // 生成 .d.ts 文件
+    "declarationDir": "dist",  // .d.ts 文件输出到 dist
+    "outDir": "dist",
     "strict": true,
-    "esModuleInterop": true, // 允许与 CommonJS 模块的互操作
-    "skipLibCheck": true, // 可选，跳过库文件检查
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node" // 对于模块解析，使用 node 解析策略
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"]
+  "include": ["src"]
 }
