@@ -1,18 +1,8 @@
-import { html2pptx } from "./analyze";
+import { html2pptx } from "./src/analyze";
 
-export type WRITE_OUTPUT_TYPE =
-  | "arraybuffer"
-  | "base64"
-  | "binarystring"
-  | "blob"
-  | "nodebuffer"
-  | "uint8array"
-  | "STREAM";
+export type WRITE_OUTPUT_TYPE = "arraybuffer" | "base64" | "binarystring" | "blob" | "nodebuffer" | "uint8array" | "STREAM";
 
-export function exportHtmlToPpt(
-  pageClassName: string = "page",
-  outputType: WRITE_OUTPUT_TYPE = "blob"
-): Promise<string | ArrayBuffer | Blob | Uint8Array> {
+export function exportHtmlToPpt(pageClassName: string = "page", outputType: WRITE_OUTPUT_TYPE = "blob"): Promise<string | ArrayBuffer | Blob | Uint8Array> {
   return new Promise(async (resolve, reject) => {
     try {
       // 使用 writeFile 自动触发浏览器下载
@@ -26,10 +16,7 @@ export function exportHtmlToPpt(
   });
 }
 
-export function downloadHtmlToPpt(
-  pageClassName: string = "page",
-  fileName: string = "presentation"
-): Promise<void> {
+export function downloadHtmlToPpt(pageClassName: string = "page", fileName: string = "presentation"): Promise<void> {
   return new Promise(async (resolve, reject) => {
     try {
       // 使用 writeFile 自动触发浏览器下载
